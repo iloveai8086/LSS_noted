@@ -6,7 +6,7 @@ Authors: Jonah Philion and Sanja Fidler
 
 import torch
 from time import time
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 import numpy as np
 import os
 
@@ -31,10 +31,10 @@ def train(version,
             pos_weight=2.13,
             logdir='./runs',
 
-            xbound=[-50.0, 50.0, 0.5],
+            xbound=[-50.0, 50.0, 0.5],   # nuscenes的范围50*50的，-50~50m,0.5一个格子
             ybound=[-50.0, 50.0, 0.5],
-            zbound=[-10.0, 10.0, 20.0],
-            dbound=[4.0, 45.0, 1.0],
+            zbound=[-10.0, 10.0, 20.0],  # -10~10 都是一个格子，长20m，意思就是你-10米的高度和10米的高度拍到一个格子，精度肯定是不行的
+            dbound=[4.0, 45.0, 1.0],     # 其实就是λ（zc），你可以理解为深度，像视锥一样的，4就是靠近自己的位置，45是远处的位置
 
             bsz=4,
             nworkers=10,
@@ -71,7 +71,7 @@ def train(version,
 
     loss_fn = SimpleLoss(pos_weight).cuda(gpuid)
 
-    writer = SummaryWriter(logdir=logdir)
+    # writer = SummaryWriter(logdir=logdir)
     val_step = 1000 if version == 'mini' else 10000
 
     model.train()
@@ -98,19 +98,19 @@ def train(version,
 
             if counter % 10 == 0:
                 print(counter, loss.item())
-                writer.add_scalar('train/loss', loss, counter)
+                # writer.add_scalar('train/loss', loss, counter)
 
             if counter % 50 == 0:
                 _, _, iou = get_batch_iou(preds, binimgs)
-                writer.add_scalar('train/iou', iou, counter)
-                writer.add_scalar('train/epoch', epoch, counter)
-                writer.add_scalar('train/step_time', t1 - t0, counter)
+                # writer.add_scalar('train/iou', iou, counter)
+                # writer.add_scalar('train/epoch', epoch, counter)
+                # writer.add_scalar('train/step_time', t1 - t0, counter)
 
             if counter % val_step == 0:
                 val_info = get_val_info(model, valloader, loss_fn, device)
                 print('VAL', val_info)
-                writer.add_scalar('val/loss', val_info['loss'], counter)
-                writer.add_scalar('val/iou', val_info['iou'], counter)
+                # writer.add_scalar('val/loss', val_info['loss'], counter)
+                # writer.add_scalar('val/iou', val_info['iou'], counter)
 
             if counter % val_step == 0:
                 model.eval()

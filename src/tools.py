@@ -193,13 +193,37 @@ def cumsum_trick(x, geom_feats, ranks):
 class QuickCumsum(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, geom_feats, ranks):
-        x = x.cumsum(0)
+        x = x.cumsum(0)  # (42162,64) C维度累加
         kept = torch.ones(x.shape[0], device=x.device, dtype=torch.bool)
-        kept[:-1] = (ranks[1:] != ranks[:-1])
-
-        x, geom_feats = x[kept], geom_feats[kept]
-        x = torch.cat((x[:1], x[1:] - x[:-1]))
-
+        kept[:-1] = (ranks[1:] != ranks[:-1])  # 最后一个必然是1，按从小到大排序，最后一个位置的特征肯定不管有没有重复的都算
+        # 0 0 1 1 1 2 2 2 2 3 3 3 3 3
+        # 0 0 1 1 1 2 2 2 2 3 3 3 3   ranks[1:]
+        # 0 1 1 1 2 2 2 2 3 3 3 3 3   ranks[:-1]
+        # 0 1 0 0 1 0 0 0 1 0 0 0 0   kept[:-1]
+        # 正好得到了相同的最后一个元素的位置
+        x, geom_feats = x[kept], geom_feats[kept]  # rank值相等的点只留下最后一个，即一个batch中的一个格子里只留最后一个点 （7628，64）（7628，4）
+        x = torch.cat((x[:1], x[1:] - x[:-1]))  # x后一个减前一个，还原到cumsum之前的x，此时的一个点是之前与其rank相等的点的feature的和，相当于把同一个格子的点特征进行了sum
+        # 意思就是，我前缀求和，想还原，就是错位减？
+        # 也不是，我举个栗子吧
+        '''
+        ranks:          0 0 1 1 2 2  2  3  3  3  3
+        x:              1 3 2 1 1 3  2  2  3  3  1
+        x.cumsum(0)     1 4 6 7 8 11 13 15 18 21 22    
+        ranks[1:]:      0 1 1 2 2 2  3  3  3  3 
+        ranks[:-1]:     0 0 1 1 2 2  2  3  3  3 
+        kept[:-1]:      0 1 0 1 0 0  1  0  0  0 
+        kept:           0 1 0 1 0 0  1  0  0  0  1
+        x[kept]:        4 7 13 22
+        x[:1]:          4
+        x[1:]:          7 13 22   
+        x[:-1]:         4 7  13
+        x[1:] - x[:-1]: 3 6  9
+        x:              4 3 6 9
+        我们用这两行算一下：
+        ranks:          0 0 1 1 2 2  2  3  3  3  3
+        x:              1 3 2 1 1 3  2  2  3  3  1
+        4 3 6 9 确实对的~ NV牛逼
+        '''
         # save kept for backward
         ctx.save_for_backward(kept)
 

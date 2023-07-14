@@ -250,7 +250,7 @@ def viz_model_preds(version,
                     modelf,
                     dataroot='/data/nuscenes',
                     map_folder='/data/nuscenes/mini',
-                    gpuid=1,
+                    gpuid=0,
                     viz_train=False,
 
                     H=900, W=1600,
@@ -265,7 +265,7 @@ def viz_model_preds(version,
                     zbound=[-10.0, 10.0, 20.0],
                     dbound=[4.0, 45.0, 1.0],
 
-                    bsz=4,
+                    bsz=1,
                     nworkers=10,
                     ):
     grid_conf = {
